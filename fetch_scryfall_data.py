@@ -1,7 +1,11 @@
 import requests
 import sqlite3
+import os
 
-DATABASE_NAME = "scryfall_data.db"
+# Define the path to the database file in the backend directory
+PROJECT_DIRECTORY = "C:\\Users\\17135\\MTGStocks\\scryfall_project"
+DATABASE_DIRECTORY = os.path.join(PROJECT_DIRECTORY, "backend")
+DATABASE_NAME = os.path.join(DATABASE_DIRECTORY, "scryfall_data.db")
 
 def create_database():
     conn = sqlite3.connect(DATABASE_NAME)
@@ -64,12 +68,12 @@ def save_current_prices_to_history(conn):
     
     conn.commit()
 
-
 def fetch_data_from_scryfall():
     response = requests.get("https://api.scryfall.com/bulk-data")
     bulk_data = response.json()
-    all_cards_uri = next(item for item in bulk_data['data'] if item["type"] == "all_cards")["download_uri"]
-    response = requests.get(all_cards_uri)
+    # Change from "all_cards" to "default_cards" to only fetch default cards data
+    default_cards_uri = next(item for item in bulk_data['data'] if item["type"] == "default_cards")["download_uri"]
+    response = requests.get(default_cards_uri)
     return response.json()
 
 def insert_data_into_db(conn, data):
@@ -86,7 +90,13 @@ def insert_data_into_db(conn, data):
     
     cards_to_insert = []
     for card in data:
-        image_url = card['image_uris']['normal'] if 'image_uris' in card else None
+        image_url = None  # Initialize image_url as None
+
+        # Check if 'image_uris' exists and prioritize English images
+        if 'image_uris' in card and card.get('lang', '') == 'en':
+            image_url = card['image_uris'].get('normal', None)
+        
+        # Append the card details to the list for insertion
         cards_to_insert.append((
             card['name'], 
             card.get('type_line', ''), 
@@ -117,10 +127,11 @@ def main():
     # Save current prices to history before fetching new data
     save_current_prices_to_history(conn)
     
+    # Fetch only the default cards data from Scryfall
     data = fetch_data_from_scryfall()
     insert_data_into_db(conn, data)
     conn.close()
-    print("Data fetching completed!")
+    print("Data fetching and insertion completed for default cards!")
 
 if __name__ == "__main__":
     main()
