@@ -41,6 +41,13 @@
             margin: 0 auto;
             border-radius: 5px;
         }
+        .mana-symbol {
+            display: inline-block;
+            width: 20px; /* Adjust size as necessary */
+            height: 20px; /* Adjust size as necessary */
+            background-repeat: no-repeat;
+            background-size: contain;
+        }
     </style>
 </head>
 <body>
@@ -52,26 +59,63 @@
     </div>
 
     <script>
-        // Fetch card data from the server and dynamically populate the card list
-        fetch('/get_cards')
-            .then(response => response.json())
-            .then(data => {
-                const cardList = document.querySelector('.card-list');
-                data.forEach(card => {
-                    const cardItem = document.createElement('li');
-                    cardItem.classList.add('card-item');
-                    cardItem.innerHTML = `
-                        <h2>${card.name}</h2>
-                        <img class="card-image" src="${card.image_url}" alt="${card.name}">
-                        <p>Type: ${card.type_line}</p>
-                        <p>Rarity: ${card.rarity}</p>
-                        <p>Set: ${card.set_name}</p>
-                        <p>Mana Cost: ${card.mana_cost}</p>
-                    `;
-                    cardList.appendChild(cardItem);
-                });
-            })
-            .catch(error => console.error('Error fetching card data:', error));
+       function convertManaCostToHtml(manaCost, symbols) {
+    // This assumes that `symbols` is an object where keys are mana codes (e.g., "{T}") and values are the corresponding SVG URLs.
+    // You would fetch this mapping from your server.
+    return manaCost.replace(/\{([^}]+)\}/g, (match, p1) => {
+        const symbolUrl = symbols[p1];
+        if (symbolUrl) {
+            return `<img class="mana-symbol" src="${symbolUrl}" alt="${p1}">`;
+        } else {
+            return match; // Return the original string if no URL is found.
+        }
+    });
+}
+
+ // Fetch symbol data from the server
+fetch('/mana-symbols')
+  .then(response => response.json())
+  .then(symbols => {
+    // Now fetch card data
+    fetch('/get_cards')
+      .then(response => response.json())
+      .then(cards => {
+        const cardList = document.querySelector('.card-list');
+        cards.forEach(card => {
+          const cardItem = document.createElement('li');
+          cardItem.classList.add('card-item');
+          
+          // Process mana cost using symbols data
+          const manaCostHtml = convertManaCostToHtml(card.mana_cost, symbols);
+          
+          cardItem.innerHTML = `
+              <h2>${card.name}</h2>
+              <img class="card-image" src="${card.image_url}" alt="${card.name}">
+              <p>Type: ${card.type_line}</p>
+              <p>Rarity: ${card.rarity}</p>
+              <p>Price: ${card.prices}</p>
+              <p>Set: ${card.set_name}</p>
+              <p>Mana Cost: ${manaCostHtml}</p>
+          `;
+          cardList.appendChild(cardItem);
+        });
+      })
+      .catch(error => console.error('Error fetching card data:', error));
+  })
+  .catch(error => console.error('Error fetching symbol data:', error));
+
+function convertManaCostToHtml(manaCost, symbols) {
+  return manaCost.replace(/\{([^}]+)\}/g, (match, p1) => {
+    const symbolUrl = symbols[match]; // Use the match to get the URL
+    if (symbolUrl) {
+      // Return an img tag for the symbol
+      return `<img class="mana-symbol" src="${symbolUrl}" alt="${p1}" style="width:20px; height:20px;">`; // Adjust size as needed
+    } else {
+      return match; // If no symbol URL is found, return the original text
+    }
+  });
+}
+
     </script>
 </body>
 </html>
