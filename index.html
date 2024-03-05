@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Database Landing Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .card-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .card-item {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .card-image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Card Database</h1>
+        <ul class="card-list">
+            <!-- Cards will be dynamically inserted here -->
+        </ul>
+    </div>
+
+    <script>
+        // Fetch card data from the server and dynamically populate the card list
+        fetch('/get_cards')
+            .then(response => response.json())
+            .then(data => {
+                const cardList = document.querySelector('.card-list');
+                data.forEach(card => {
+                    const cardItem = document.createElement('li');
+                    cardItem.classList.add('card-item');
+                    cardItem.innerHTML = `
+                        <h2>${card.name}</h2>
+                        <img class="card-image" src="${card.image_url}" alt="${card.name}">
+                        <p>Type: ${card.type_line}</p>
+                        <p>Rarity: ${card.rarity}</p>
+                        <p>Set: ${card.set_name}</p>
+                        <p>Mana Cost: ${card.mana_cost}</p>
+                    `;
+                    cardList.appendChild(cardItem);
+                });
+            })
+            .catch(error => console.error('Error fetching card data:', error));
+    </script>
+</body>
+</html>
