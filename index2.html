@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Database Landing Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .card-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .card-item {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .card-image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            border-radius: 5px;
+        }
+        .mana-symbol {
+            display: inline-block;
+            width: 20px; /* Adjust size as necessary */
+            height: 20px; /* Adjust size as necessary */
+            background-repeat: no-repeat;
+            background-size: contain;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Card Database</h1>
+        <!-- Search form -->
+        <form id="searchForm">
+            <input type="text" id="searchInput" placeholder="Search...">
+            <button type="submit">Search</button>
+        </form>
+        <ul class="card-list">
+            <!-- Cards will be dynamically inserted here -->
+        </ul>
+    </div>
+
+    <script>
+        document.getElementById("searchForm").addEventListener("submit", function(event) {
+            event.preventDefault(); // Prevent default form submission
+            const query = document.getElementById("searchInput").value.trim();
+            fetch(`/search?query=${query}`)
+                .then(response => response.json())
+                .then(cards => {
+                    document.querySelector('.card-list').innerHTML = ''; // Clear existing card list
+                    cards.forEach(card => renderCard(card));
+                })
+                .catch(error => console.error('Error searching cards:', error));
+        });
+
+        function renderCard(card) {
+            const cardList = document.querySelector('.card-list');
+            const cardItem = document.createElement('li');
+            cardItem.classList.add('card-item');
+            cardItem.innerHTML = `
+                <h2>${card.name}</h2>
+                <img class="card-image" src="${card.image_url}" alt="${card.name}">
+                <p>Type: ${card.type_line}</p>
+                <p>Rarity: ${card.rarity}</p>
+                <p>Price: ${card.prices}</p>
+                <p>Set: ${card.set_name}</p>
+                <p>Mana Cost: ${card.mana_cost}</p>
+            `;
+            cardList.appendChild(cardItem);
+        }
+    </script>
+</body>
+</html>     
