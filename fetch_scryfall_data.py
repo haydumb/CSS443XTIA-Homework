@@ -41,6 +41,22 @@ def create_database():
         FOREIGN KEY(card_id) REFERENCES cards(id)
     )
     ''')
+
+     # Create symbols table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS symbols (
+        id INTEGER PRIMARY KEY,
+        symbol TEXT,
+        svg_uri TEXT,
+        loose_variant TEXT,
+        english TEXT,
+        transposable BOOLEAN,
+        represents_mana BOOLEAN,
+        appears_in_mana_costs BOOLEAN,
+        cmc REAL,
+        funny BOOLEAN
+    )
+    ''')
     
     conn.commit()
     conn.close()
@@ -75,6 +91,11 @@ def fetch_data_from_scryfall():
     default_cards_uri = next(item for item in bulk_data['data'] if item["type"] == "default_cards")["download_uri"]
     response = requests.get(default_cards_uri)
     return response.json()
+
+def fetch_symbols_from_scryfall():
+    response = requests.get("https://api.scryfall.com/symbology")
+    symbols_data = response.json()
+    return symbols_data['data']
 
 def insert_data_into_db(conn, data):
     cursor = conn.cursor()
@@ -120,18 +141,47 @@ def insert_data_into_db(conn, data):
     
     conn.commit()
 
+def insert_symbols_into_db(conn, symbols):
+    cursor = conn.cursor()
+    
+    # Truncate the symbols table
+    cursor.execute('DELETE FROM symbols')
+    
+    symbols_to_insert = []
+    for symbol in symbols:
+        symbols_to_insert.append((
+            symbol['symbol'],
+            symbol.get('svg_uri', ''),
+            symbol.get('loose_variant', ''),
+            symbol.get('english', ''),
+            symbol.get('transposable', False),
+            symbol.get('represents_mana', False),
+            symbol.get('appears_in_mana_costs', False),
+            symbol.get('cmc', 0) if symbol.get('cmc') is not None else 0,
+            symbol.get('funny', False),
+        ))
+    
+    cursor.executemany('''
+    INSERT INTO symbols (symbol, svg_uri, loose_variant, english, transposable, represents_mana, appears_in_mana_costs, cmc, funny)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', symbols_to_insert)
+    
+    conn.commit()
+
 def main():
     create_database()
     conn = sqlite3.connect(DATABASE_NAME)
     
-    # Save current prices to history before fetching new data
-    save_current_prices_to_history(conn)
-    
-    # Fetch only the default cards data from Scryfall
+    # Handle cards data
     data = fetch_data_from_scryfall()
     insert_data_into_db(conn, data)
+    
+    # Handle symbols data
+    symbols = fetch_symbols_from_scryfall()
+    insert_symbols_into_db(conn, symbols)
+    
     conn.close()
-    print("Data fetching and insertion completed for default cards!")
+    print("Data fetching and insertion completed for default cards and symbols!")
 
 if __name__ == "__main__":
     main()
