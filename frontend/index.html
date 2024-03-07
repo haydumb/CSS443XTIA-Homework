@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Database Landing Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .card-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .card-item {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .card-image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            border-radius: 5px;
+        }
+        .mana-symbol {
+            display: inline-block;
+            width: 20px; /* Adjust size as necessary */
+            height: 20px; /* Adjust size as necessary */
+            background-repeat: no-repeat;
+            background-size: contain;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Card Database</h1>
+        <form id="searchForm">
+            <input type="text" id="searchInput" placeholder="Enter search term">
+            <button type="submit">Search</button>
+        </form>
+        <ul class="card-list">
+            <!-- Cards will be dynamically inserted here -->
+        </ul>
+    </div>
+
+    <script>
+        let symbols = {}; // Store symbols data globally
+    
+        const apiBasePath = 'http://localhost:5000'; // Adjusted API base path
+    
+        // Fetch symbol data from the server
+        fetch(`${apiBasePath}/mana-symbols`)
+        .then(response => response.json())
+        .then(fetchedSymbols => {
+            symbols = fetchedSymbols; // Store fetched symbols for later use
+            fetchCards(); // Fetch initial set of cards
+        })
+        .catch(error => console.error('Error fetching symbol data:', error));
+    
+        function fetchCards() {
+            fetch(`${apiBasePath}/get_cards`)
+            .then(response => response.json())
+            .then(cards => {
+                const cardList = document.querySelector('.card-list');
+                cardList.innerHTML = ''; // Ensure the list is empty before adding new cards
+                cards.forEach(card => {
+                    renderCard(card); // Process and display each card
+                });
+            })
+            .catch(error => console.error('Error fetching card data:', error));
+        }
+    
+        document.getElementById("searchForm").addEventListener("submit", function(event) {
+            event.preventDefault(); // Prevent default form submission
+            const query = document.getElementById("searchInput").value.trim();
+            fetch(`${apiBasePath}/search?query=${query}`)
+                .then(response => response.json())
+                .then(cards => {
+                    document.querySelector('.card-list').innerHTML = ''; // Clear existing card list
+                    cards.forEach(card => renderCard(card)); // Display each card
+                })
+                .catch(error => console.error('Error searching cards:', error));
+        });
+    
+        function renderCard(card) {
+            const cardList = document.querySelector('.card-list');
+            const cardItem = document.createElement('li');
+            cardItem.classList.add('card-item');
+    
+            let prices;
+            try {
+                // Sanitize and convert the string to valid JSON format
+                const sanitizedJson = card.prices
+                  .replace(/'/g, '"') // Replace single quotes with double quotes
+                  .replace(/None/g, 'null'); // Replace None with null
+    
+                prices = JSON.parse(sanitizedJson);
+            } catch (error) {
+                console.error('Error parsing prices JSON:', error, card.prices);
+                prices = {}; // Fallback to an empty object
+            }
+    
+            const usdPrice = prices.usd ? `$${prices.usd}` : 'N/A';
+            const usdFoilPrice = prices.usd_foil ? `$${prices.usd_foil}` : 'N/A';
+            const manaCostHtml = convertManaCostToHtml(card.mana_cost, symbols); // Convert mana cost using symbols data
+    
+            cardItem.innerHTML = `
+                <h2>${card.name}</h2>
+                <img class="card-image" src="${card.image_url}" alt="${card.name}">
+                <p>Type: ${card.type_line}</p>
+                <p>Rarity: ${card.rarity}</p>
+                <p>Price (Normal): ${usdPrice}</p>
+                <p>Price (Foil): ${usdFoilPrice}</p>
+                <p>Set: ${card.set_name}</p>
+                <p>Mana Cost: ${manaCostHtml}</p>
+            `;
+            cardList.appendChild(cardItem);
+        }
+    
+        function convertManaCostToHtml(manaCost, symbols) {
+            return manaCost.replace(/\{([^}]+)\}/g, (match, p1) => {
+                const symbolUrl = symbols[match]; // Use the match to get the URL
+                if (symbolUrl) {
+                    // Return an img tag for the symbol
+                    return `<img class="mana-symbol" src="${symbolUrl}" alt="${p1}" style="width:20px; height:20px;">`; // Adjust size as needed
+                } else {
+                    return match; // If no symbol URL is found, return the original text
+                }
+            });
+        }
+    </script>
+</body>
+</html>
